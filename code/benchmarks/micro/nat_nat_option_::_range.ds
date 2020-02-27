@@ -1,0 +1,73 @@
+type natnatoption =
+  | None
+  | Some of nat * nat
+
+struct
+  type t = natnatoption
+
+  let empty = None ;;
+
+  let is_empty =
+    fun (r : t) ->
+      (match r binding r with
+       | None -> True
+       | Some -> False)
+  ;;
+
+  let contains =
+    fun (r : t) -> fun (n : nat) ->
+      match r binding r with
+      | None -> False
+      | Some ->
+        (match nat_eq r.0 n binding c with
+         | True -> True
+         | False ->
+           (match nat_lt r.0 n binding c with
+            | True ->
+              (match nat_lt r.1 n binding c with
+               | True -> False
+               | False -> True)
+            | False -> False))
+  ;;
+
+  let expand =
+    fun (r : t) -> fun (n : nat) ->
+      match r binding rp with
+      | None -> Some (n,n)
+      | Some ->
+        (match nat_lt rp.0 n binding c with
+         | True -> (match nat_lt rp.1 n binding c with
+                    | True -> Some (rp.0,n)
+                    | False -> r)
+         | False -> (match nat_eq rp.0 n binding c with
+                     | True -> r
+                     | False -> Some (n,rp.1)))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val is_empty : t -> bool
+
+  val contains : t -> nat -> bool
+
+  val expand : t -> nat -> t
+end
+
+maintains
+
+forall (r : t) .
+  forall (i : nat) .
+    forall (j : nat) .
+      (and
+        (and
+          (contains (expand r i) i)
+          (and
+            (not (contains empty i))
+            (implies
+              (contains r i)
+              (contains (expand r j) i))))
+        (is_empty empty))

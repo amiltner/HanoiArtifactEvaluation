@@ -1,0 +1,141 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/Trie.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/vfa-current/Trie.html
+ *
+ * `delete` (= `remove`) and specification for them used from Coq stdlib:
+ *   https://coq.github.io/doc/master/stdlib/Coq.FSets.FMapFacts.html
+ *)
+
+type value = mu value .
+  | UnitVal
+  | SingleVal of value
+
+let value_eq =
+  fix (value_eq : value -> value -> bool) =
+    fun (v1 : value) ->
+      fun (v2 : value) ->
+        match v1 binding v1 with
+        | UnitVal -> (match v2 binding v2 with
+                      | UnitVal -> True
+                      | SingleVal -> False)
+        | SingleVal -> (match v2 binding v2 with
+                        | UnitVal -> False
+                        | SingleVal -> value_eq v1 v2)
+;;
+
+type pos = mu pos .
+  | Halt
+  | GoLeft of pos
+  | GoRight of pos
+
+let pos_eq =
+  fix (pos_eq : pos -> pos -> bool) =
+    fun (p1 : pos) ->
+      fun (p2 : pos) ->
+        match p1 binding p1 with
+        | Halt -> (match p2 binding p2 with
+                   | Halt -> True
+                   | GoLeft -> False
+                   | GoRight -> False)
+        | GoLeft -> (match p2 binding p2 with
+                     | Halt -> False
+                     | GoLeft -> pos_eq p1 p2
+                     | GoRight -> False)
+        | GoRight -> (match p2 binding p2 with
+                      | Halt -> False
+                      | GoLeft -> False
+                      | GoRight -> pos_eq p1 p2)
+;;
+
+type trie = mu trie .
+  | Leaf
+  | Node of (trie * value * trie)
+
+struct
+  type t = trie
+
+  let empty = Leaf ;;
+
+  let default = UnitVal ;;
+
+  let lookup =
+    fix (lookup : t -> pos -> value) =
+      fun (tr : t) ->
+        fun (p : pos) ->
+          match tr binding tr with
+          | Leaf -> default
+          | Node ->
+            (match p binding p with
+             | Halt -> tr.1
+             | GoLeft -> lookup tr.0 p
+             | GoRight -> lookup tr.2 p)
+  ;;
+
+  let insert =
+    fix (insert : t -> pos -> value -> t) =
+      fun (tr : t) ->
+        fun (p : pos) ->
+          fun (v : value) ->
+            match tr binding tr with
+            | Leaf ->
+              (match p binding p with
+               | Halt -> Node (Leaf, v, Leaf)
+               | GoLeft -> Node ((insert (Leaf) p v), default, Leaf)
+               | GoRight -> Node (Leaf, default, (insert (Leaf) p v)))
+            | Node ->
+              (match p binding p with
+               | Halt -> Node (tr.0, v, tr.2)
+               | GoLeft -> Node ((insert tr.0 p v), tr.1, tr.2)
+               | GoRight -> Node (tr.0, tr.1, (insert tr.2 p v)))
+  ;;
+
+  (* additional functions beyond VFA *)
+
+  let delete =
+    fix (delete : t -> pos -> t) =
+      fun (tr : t) ->
+        fun (p : pos) ->
+          match tr binding tr with
+          | Leaf -> Leaf
+          | Node ->
+            (match p binding p with
+              | Halt -> Node (tr.0, default, tr.2)
+              | GoLeft -> Node ((delete tr.0 p), tr.1, tr.2)
+              | GoRight -> Node (tr.0, tr.1, (delete tr.2 p)))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+  val default : value
+
+  val lookup : t -> pos -> value
+  val insert : t -> pos -> value -> t
+
+  (* additional functions beyond VFA *)
+
+  val delete : t -> pos -> t
+end
+
+maintains
+
+forall (d : t) .
+  forall (k1 : pos) .
+    forall (k2 : pos) .
+      forall (v : value) .
+        (and
+           (and
+              (and
+                 (value_eq default (lookup empty k1))
+                 (value_eq v (lookup (insert d k1 v) k1)))
+              (implies
+                 (not (pos_eq k1 k2))
+                 (and
+                    (value_eq (lookup (delete d k1) k2)
+                              (lookup d k2))
+                    (value_eq (lookup (insert d k1 v) k2)
+                              (lookup d k2)))))
+           (value_eq default (lookup (delete d k1) k1)))

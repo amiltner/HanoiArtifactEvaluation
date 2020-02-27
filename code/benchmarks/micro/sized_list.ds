@@ -1,0 +1,67 @@
+type list = mu list .
+  | Nil of nat
+  | Cons of (nat * nat * list)
+
+struct
+  type t = list
+
+  let empty = Nil O ;;
+
+  let length =
+    fun (l : t) ->
+      match l binding lp with
+      | Nil -> lp
+      | Cons -> lp.0
+  ;;
+
+  let lookup =
+    fix (lookup : t -> nat -> bool) =
+      fun (l : t) -> fun (x : nat) ->
+        match l binding l with
+        | Nil -> False
+        | Cons ->
+          (match nat_eq l.1 x binding c with
+           | True -> True
+           | False -> lookup l.2 x)
+  ;;
+
+  let insert =
+    fun (l : t) ->
+      fun (x : nat) ->
+        Cons(S (length l), x, l)
+  ;;
+
+  let delete =
+    fun (l : t) -> fun (x : nat) ->
+      ((fix (delete : nat -> t -> nat -> t) =
+      fun (s : nat) -> fun (l : t) -> fun (x : nat) ->
+          match s binding sp with
+          | O -> l
+          | S ->
+          (match l binding lp with
+           | Nil -> l
+           | Cons -> (match nat_eq x lp.1 binding c with
+                      | True -> delete sp lp.2 x
+                      | False -> (fun (l : t) -> Cons(S (length l), lp.1, l))
+                                (delete sp lp.2 x))))
+    (length l) l x)
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val length : t -> nat
+  val lookup : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete : t -> nat -> t
+end
+
+maintains
+
+forall (s : t) .
+  forall (i : nat) .
+        (not (lookup (delete s i) i))

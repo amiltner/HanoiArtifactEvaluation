@@ -1,0 +1,114 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/Trie.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/vfa-current/Trie.html
+ *)
+
+type value = mu value .
+  | UnitVal
+  | SingleVal of value
+
+let value_eq =
+  fix (value_eq : value -> value -> bool) =
+    fun (v1 : value) ->
+      fun (v2 : value) ->
+        match v1 binding v1 with
+        | UnitVal -> (match v2 binding v2 with
+                      | UnitVal -> True
+                      | SingleVal -> False)
+        | SingleVal -> (match v2 binding v2 with
+                        | UnitVal -> False
+                        | SingleVal -> value_eq v1 v2)
+;;
+
+type pos = mu pos .
+  | Halt
+  | GoLeft of pos
+  | GoRight of pos
+
+let pos_eq =
+  fix (pos_eq : pos -> pos -> bool) =
+    fun (p1 : pos) ->
+      fun (p2 : pos) ->
+        match p1 binding p1 with
+        | Halt -> (match p2 binding p2 with
+                   | Halt -> True
+                   | GoLeft -> False
+                   | GoRight -> False)
+        | GoLeft -> (match p2 binding p2 with
+                     | Halt -> False
+                     | GoLeft -> pos_eq p1 p2
+                     | GoRight -> False)
+        | GoRight -> (match p2 binding p2 with
+                      | Halt -> False
+                      | GoLeft -> False
+                      | GoRight -> pos_eq p1 p2)
+;;
+
+type trie = mu trie .
+  | Leaf
+  | Node of (trie * value * trie)
+
+struct
+  type t = trie
+
+  let empty = Leaf ;;
+
+  let default = UnitVal ;;
+
+  let lookup =
+    fix (lookup : t -> pos -> value) =
+      fun (tr : t) ->
+        fun (p : pos) ->
+          match tr binding tr with
+          | Leaf -> default
+          | Node ->
+            (match p binding p with
+             | Halt -> tr.1
+             | GoLeft -> lookup tr.0 p
+             | GoRight -> lookup tr.2 p)
+  ;;
+
+  let insert =
+    fix (insert : t -> pos -> value -> t) =
+      fun (tr : t) ->
+        fun (p : pos) ->
+          fun (v : value) ->
+            match tr binding trp with
+            | Leaf ->
+              (match p binding pp with
+               | Halt -> Node (Leaf, v, Leaf)
+               | GoLeft -> Node ((insert (Leaf) pp v), default, Leaf)
+               | GoRight -> Node (Leaf, default, (insert (Leaf) pp v)))
+            | Node ->
+              (match p binding pp with
+               | Halt -> Node (trp.0, v, trp.2)
+               | GoLeft -> Node ((insert trp.0 pp v), trp.1, trp.2)
+               | GoRight -> Node (trp.0, trp.1, (insert trp.2 pp v)))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+  val default : value
+
+  val lookup : t -> pos -> value
+  val insert : t -> pos -> value -> t
+end
+
+maintains
+
+forall (d : t) .
+  forall (p1 : pos) .
+    forall (p2 : pos) .
+      forall (v : value) .
+        (and
+           (and
+              (value_eq default (lookup empty p1))
+              (value_eq v (lookup (insert d p1 v) p1)))
+           (implies
+              (not (pos_eq p1 p2))
+              (value_eq (lookup (insert d p1 v) p2)
+                        (lookup d p2))))

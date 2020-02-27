@@ -1,0 +1,16 @@
+fix f1 (t1:tree) : bool =
+  match t1 with
+    | Leaf N_fresh_var_0 -> True
+    | Node N_fresh_var_0 -> (fun (t2:unit) ->
+                               (fun (n1:unit) ->
+                                  (fun (t3:unit) ->
+                                     match f1 t2 with
+                                       | False N_fresh_var_1 -> False
+                                       | True N_fresh_var_1 -> and (f1 t3)
+                                                                 (nat_eq n1
+                                                                    (
+                                                                    true_maximum
+                                                                    t1)))
+                                    (#3 N_fresh_var_0))
+                                 (#2 N_fresh_var_0))
+                              (#1 N_fresh_var_0)

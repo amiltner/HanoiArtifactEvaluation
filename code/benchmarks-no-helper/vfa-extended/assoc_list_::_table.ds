@@ -1,0 +1,102 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/ADT.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/lf-current/Lists.html#lab96
+ *
+ * `del` (= `remove`) and specification for them used from Coq stdlib:
+ *   https://coq.github.io/doc/master/stdlib/Coq.FSets.FMapFacts.html
+ *)
+
+type value = mu value .
+  | UnitVal
+  | SingleVal of value
+
+let value_eq =
+  fix (value_eq : value -> value -> bool) =
+    fun (v1 : value) ->
+      fun (v2 : value) ->
+        match v1 binding v1 with
+        | UnitVal -> (match v2 binding v2 with
+                      | UnitVal -> True
+                      | SingleVal -> False)
+        | SingleVal -> (match v2 binding v2 with
+                        | UnitVal -> False
+                        | SingleVal -> value_eq v1 v2)
+;;
+
+type list = mu list .
+  | Nil
+  | Cons of (nat * value * list)
+
+struct
+  type t = list
+
+  let empty = Nil ;;
+
+  let default = UnitVal ;;
+
+  let get =
+    fix (get : t -> nat -> value) =
+      fun (l : t) ->
+        fun (x : nat) ->
+          match l binding l with
+          | Nil -> default
+          | Cons -> (match nat_eq l.0 x binding c with
+                     | True -> l.1
+                     | False -> get l.2 x)
+  ;;
+
+  let set =
+    fun (l : t) ->
+      fun (x : nat) ->
+        fun (v : value) ->
+          Cons (x, v, l)
+  ;;
+
+  (* additional functions beyond VFA *)
+
+  let del =
+    fix (del : t -> nat -> t) =
+      fun (l : t) ->
+        fun (x : nat) ->
+          match l binding l with
+          | Nil -> Nil
+          | Cons -> (match nat_eq l.0 x binding c with
+                     | True -> del l.2 x
+                     | False -> Cons (l.0, l.1, (del l.2 x)))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+  val default : value
+
+  val get : t -> nat -> value
+  val set : t -> nat -> value -> t
+
+  (* additional functions beyond VFA *)
+
+  val del : t -> nat -> t
+end
+
+maintains
+
+forall (d : t) .
+  forall (k1 : nat) .
+    forall (k2 : nat) .
+      forall (v : value) .
+        (and
+           (and
+              (and
+                 (value_eq default (get empty k1))
+                 (value_eq v (get (set d k1 v) k1)))
+              (implies
+                 (not (nat_eq k1 k2))
+                 (and
+                    (value_eq (get (del d k1) k2)
+                              (get d k2))
+                    (value_eq (get (set d k1 v) k2)
+                              (get d k2)))))
+           (value_eq default (get (del d k1) k1)))

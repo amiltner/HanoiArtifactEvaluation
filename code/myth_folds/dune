@@ -1,0 +1,9 @@
+(env
+    (debug (ocamlopt_flags (:standard -g -Oclassic)))
+    (_ (ocamlopt_flags (:standard -O3 -rounds 6))))
+
+(library
+    (name Myth_folds)
+    (public_name Myth_folds)
+    (libraries core str)
+    (preprocess (pps ppx_hash ppx_deriving.std ppx_optcomp ppx_compare ppx_sexp_conv)))

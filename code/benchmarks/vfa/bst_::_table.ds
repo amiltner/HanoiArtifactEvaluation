@@ -1,0 +1,86 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/ADT.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/vfa-current/SearchTree.html
+ *)
+
+type value = mu value .
+  | UnitVal
+  | SingleVal of value
+
+let value_eq =
+  fix (value_eq : value -> value -> bool) =
+    fun (v1 : value) ->
+      fun (v2 : value) ->
+        match v1 binding v1 with
+        | UnitVal -> (match v2 binding v2 with
+                      | UnitVal -> True
+                      | SingleVal -> False)
+        | SingleVal -> (match v2 binding v2 with
+                        | UnitVal -> False
+                        | SingleVal -> value_eq v1 v2)
+;;
+
+type bst = mu bst .
+  | Leaf
+  | Node of (bst * nat * value * bst)
+
+struct
+  type t = bst
+
+  let empty = Leaf ;;
+
+  let default = UnitVal ;;
+
+  let get =
+    fix (get : t -> nat -> value) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding b with
+          | Leaf -> default
+          | Node -> (match nat_lt x b.1 binding c with
+                     | True -> get b.0 x
+                     | False -> (match nat_lt b.1 x binding c with
+                                 | True -> get b.3 x
+                                 | False -> b.2))
+  ;;
+
+  let set =
+    fix (set : t -> nat -> value -> t) =
+      fun (b : t) ->
+        fun (k : nat) ->
+          fun (v : value) ->
+            match b binding bp with
+            | Leaf -> Node (Leaf, k, v, Leaf)
+            | Node -> (match nat_lt k bp.1 binding c with
+                       | True -> Node ((set bp.0 k v), bp.1, bp.2, bp.3)
+                       | False -> (match nat_lt bp.1 k binding c with
+                                   | True -> Node (bp.0, bp.1, bp.2, (set bp.3 k v))
+                                   | False -> Node (bp.0, k, v, bp.3)))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+  val default : value
+
+  val get : t -> nat -> value
+  val set : t -> nat -> value -> t
+end
+
+maintains
+
+forall (d : t) .
+  forall (k1 : nat) .
+    forall (k2 : nat) .
+      forall (v : value) .
+        (and
+          (and
+             (value_eq default (get empty k1))
+             (value_eq v (get (set d k1 v) k1)))
+          (implies
+             (not (nat_eq k1 k2))
+             (value_eq (get (set d k1 v) k2)
+                       (get d k2))))

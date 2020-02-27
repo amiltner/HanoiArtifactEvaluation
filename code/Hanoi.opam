@@ -1,0 +1,25 @@
+opam-version: "1.2"
+
+name: "DSInvGen"
+version: "0.6b"
+
+maintainer: "Saswat Padhi <saswat.sourav@gmail.com>"
+authors: "Saswat Padhi <saswat.sourav@gmail.com>"
+homepage: "http://saswatpadhi.github.io/"
+
+bug-reports: "https://github.com/SaswatPadhi/DSInvGen/issues"
+license: "MIT"
+dev-repo: "git+https://github.com:SaswatPadhi/DSInvGen.git"
+
+available: [ ocaml-version >= "4.04.2" ]
+
+build: [
+  [ "dune" "build" "-p" name "-j" jobs ]
+]
+
+depends: [
+  "dune"          {build & >= "1.1.1"}
+  "alcotest"      {test & >= "0.7"}
+  "core"          {>= "0.11"}
+  "core_extended" {>= "0.11"}
+]

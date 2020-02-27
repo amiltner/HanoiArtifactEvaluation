@@ -1,0 +1,131 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/ADT.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/vfa-current/SearchTree.html
+ *
+ * `del` (= `remove`) and specification for them used from Coq stdlib:
+ *   https://coq.github.io/doc/master/stdlib/Coq.FSets.FMapFacts.html
+ *)
+
+type value = mu value .
+  | UnitVal
+  | SingleVal of value
+
+let value_eq =
+  fix (value_eq : value -> value -> bool) =
+    fun (v1 : value) ->
+      fun (v2 : value) ->
+        match v1 binding v1 with
+        | UnitVal -> (match v2 binding v2 with
+                      | UnitVal -> True
+                      | SingleVal -> False)
+        | SingleVal -> (match v2 binding v2 with
+                        | UnitVal -> False
+                        | SingleVal -> value_eq v1 v2)
+;;
+
+type bst = mu bst .
+  | Leaf
+  | Node of (bst * nat * value * bst)
+
+struct
+  type t = bst
+
+  let empty = Leaf ;;
+
+  let default = UnitVal ;;
+
+  let get =
+    fix (get : t -> nat -> value) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding b with
+          | Leaf -> default
+          | Node -> (match nat_lt x b.1 binding c with
+                     | True -> get b.0 x
+                     | False -> (match nat_lt b.1 x binding c with
+                                 | True -> get b.3 x
+                                 | False -> b.2))
+  ;;
+
+  let set =
+    fix (set : t -> nat -> value -> t) =
+      fun (b : t) ->
+        fun (k : nat) ->
+          fun (v : value) ->
+            match b binding bp with
+            | Leaf -> Node (Leaf, k, v, Leaf)
+            | Node -> (match nat_lt k bp.1 binding c with
+                       | True -> Node ((set bp.0 k v), bp.1, bp.2, bp.3)
+                       | False -> (match nat_lt bp.1 k binding c with
+                                   | True -> Node (bp.0, bp.1, bp.2, (set bp.3 k v))
+                                   | False -> Node (bp.0, k, v, bp.3)))
+  ;;
+
+  (* additional functions beyond VFA *)
+
+  let min_key =
+    fix (min_key : t -> nat * value) =
+      fun (b : t) ->
+        (match b binding b with
+         | Leaf -> (O,UnitVal)
+         | Node -> (match b.0 binding bl with
+                    | Leaf -> (b.1, b.2)
+                    | Node -> min_key b.0))
+  ;;
+
+  let del =
+    fix (del : t -> nat -> t) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding bp with
+          | Leaf -> Leaf
+          | Node ->
+              (match nat_eq x bp.1 binding c with
+               | True -> (match bp.0 binding bl with
+                        | Leaf -> bp.3
+                        | Node ->
+                            (match bp.3 binding br with
+                             | Leaf -> bp.0
+                             | Node -> (fun (m : nat*value) ->
+                                          Node (bp.0, m.0, m.1, (del bp.3 m.0)))
+                                       (min_key bp.3)))
+               | False -> (match nat_lt x bp.1 binding c with
+                           | True -> Node ((del bp.0 x), bp.1, bp.2, bp.3)
+                           | False -> Node (bp.0, bp.1, bp.2, (del bp.3 x))))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+  val default : value
+
+  val get : t -> nat -> value
+  val set : t -> nat -> value -> t
+
+  (* additional functions beyond VFA *)
+
+  val del : t -> nat -> t
+end
+
+maintains
+
+forall (d : t) .
+  forall (k1 : nat) .
+    forall (k2 : nat) .
+      forall (v : value) .
+        (and
+           (and
+              (and
+                 (value_eq default (get empty k1))
+                 (value_eq v (get (set d k1 v) k1)))
+              (implies
+                 (not (nat_eq k1 k2))
+                 (and
+                    (value_eq (get (del d k1) k2)
+                              (get d k2))
+                    (value_eq (get (set d k1 v) k2)
+                              (get d k2)))))
+           (value_eq default (get (del d k1) k1)))

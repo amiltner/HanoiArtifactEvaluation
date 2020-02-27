@@ -1,0 +1,13 @@
+fun (l1:list) ->
+  match maximum l1 with
+    | None N_fresh_var_0 -> True
+    | Some N_fresh_var_0 -> (fun (n1:unit) ->
+                               match delete_max l1 with
+                                 | Nil N_fresh_var_1 -> True
+                                 | Cons N_fresh_var_1 -> (fun (n2:unit) ->
+                                                            (fun (l2:unit) ->
+                                                               nat_lte n2 n1)
+                                                              (#2
+                                                                 N_fresh_var_1))
+                                                           (#1 N_fresh_var_1))
+                              N_fresh_var_0

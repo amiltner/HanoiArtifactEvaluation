@@ -1,0 +1,12 @@
+fun (n1:natnatoption) ->
+  match n1 with
+    | NonePair N_fresh_var_0 -> True
+    | SomePair N_fresh_var_0 -> (fun (n2:unit) ->
+                                   (fun (n3:unit) ->
+                                      match n3 with
+                                        | O N_fresh_var_1 -> False
+                                        | S N_fresh_var_1 -> (fun (n4:unit) ->
+                                                                True)
+                                                               N_fresh_var_1)
+                                     (#2 N_fresh_var_0))
+                                  (#1 N_fresh_var_0)

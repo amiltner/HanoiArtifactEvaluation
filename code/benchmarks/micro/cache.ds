@@ -1,0 +1,96 @@
+type natoption =
+  | None
+  | Some of nat
+
+struct
+  type natoptionpair = natoption * natoption
+
+  type t = natoptionpair
+
+  let empty = (None,None) ;;
+
+  let is_empty =
+    fun (r : t) ->
+      (match r.0 binding b with
+       | None ->
+         (match r.1 binding b with
+          | None -> True
+          | Some -> False)
+       | Some -> False)
+  ;;
+
+  let contains =
+    fun (r : t) -> fun (n : nat) ->
+      match r.0 binding z with
+      | None -> False
+      | Some ->
+        (match nat_eq z n binding c with
+         | True -> True
+         | False ->
+           (match r.1 binding z with
+            | None -> False
+            | Some ->
+              nat_eq z n))
+  ;;
+
+  let insert =
+    fun (r : t) -> fun (n : nat) ->
+      match r.0 binding z with
+      | None -> (Some n, None)
+      | Some ->
+        (match nat_lt n z binding c with
+         | True -> (Some n,Some z)
+         | False -> (Some n,None))
+  ;;
+
+  let delete =
+    fun (r : t) -> fun (n : nat) ->
+      match r.0 binding z with
+      | None ->
+        (match r.1 binding z with
+         | None -> r
+         | Some ->
+           (match nat_eq z n binding c with
+            | True -> (None, None)
+            | False -> r))
+      | Some ->
+        (match nat_eq z n binding c with
+         | True -> (None,r.1)
+         | False ->
+           (match nat_lt z n binding c with
+            | True ->
+              (match r.1 binding z with
+               | None -> r
+               | Some ->
+                 (match nat_eq z n binding c with
+                  | True -> (r.0, None)
+                  | False -> r))
+            | False -> r))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val is_empty : t -> bool
+
+  val contains : t -> nat -> bool
+
+  val insert : t -> nat -> t
+
+  val delete : t -> nat -> t
+end
+
+maintains
+
+forall (r : t) .
+  forall (i : nat) .
+    (and
+      (and
+        (and
+          (contains (insert r i) i)
+          (not (contains (delete r i) i)))
+        (not (contains empty i)))
+        (is_empty empty))

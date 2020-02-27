@@ -1,0 +1,7 @@
+fun (n1:natnatoption) ->
+  match n1 with
+    | None N_fresh_var_0 -> True
+    | Some N_fresh_var_0 -> (fun (n2:unit) ->
+                               (fun (n3:unit) -> contains n1 n3)
+                                 (#2 N_fresh_var_0))
+                              (#1 N_fresh_var_0)

@@ -1,0 +1,116 @@
+type bst = mu bst .
+  | Leaf
+  | Node of (bst * nat * bst)
+
+type nat_option =
+  | Some of nat
+  | None
+
+struct
+  type t = bst
+
+  let empty = Leaf ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (b : t) ->
+        match b binding b with
+        | Leaf -> O
+        | Node -> add (S O) (add (size b.0) (size b.2))
+  ;;
+
+  let lookup =
+    fix (lookup : t -> nat -> bool) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding b with
+          | Leaf -> False
+          | Node -> (match nat_eq x b.1 binding c with
+                    | True -> True
+                    | False -> (match nat_lt x b.1 binding c with
+                                | True -> lookup b.0 x
+                                | False -> lookup b.2 x))
+  ;;
+
+  let insert =
+    fix (insert : t -> nat -> t) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding bp with
+          | Leaf -> Node (Leaf, x, Leaf)
+          | Node -> (match nat_lt x bp.1 binding c with
+                     | True -> Node ((insert bp.0 x), bp.1, bp.2)
+                     | False -> (match nat_eq x bp.1 binding c with
+                                 | True -> b
+                                 | False -> Node (bp.0, bp.1, (insert bp.2 x))))
+  ;;
+
+  let min_val =
+    fix (min_val : t -> nat) =
+      fun (b : t) ->
+        match b binding b with
+        | Leaf -> O
+        | Node -> (match b.0 binding bl with
+                   | Leaf -> b.1
+                   | Node -> min_val b.0)
+  ;;
+
+  let delete =
+    fix (delete : t -> nat -> t) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding bp with
+          | Leaf -> Leaf
+          | Node ->
+              (match nat_eq x bp.1 binding c with
+               | True -> (match bp.0 binding bl with
+                        | Leaf -> bp.2
+                        | Node ->
+                            (match bp.2 binding br with
+                             | Leaf -> bp.0
+                             | Node -> (fun (m : nat) ->
+                                          Node (bp.0, m, (delete bp.2 m)))
+                                       (min_val bp.2)))
+               | False -> (match nat_lt x bp.1 binding c with
+                           | True -> Node ((delete bp.0 x), bp.1, bp.2)
+                           | False -> Node (bp.0, bp.1, (delete bp.2 x))))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+  val lookup : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete : t -> nat -> t
+end
+
+maintains
+
+forall (s : t) .
+  forall (i : nat) .
+    forall (j : nat) .
+      (and
+         (and
+            (and
+               (nat_eq (O) (size empty))
+               (implies
+                  (not (lookup s i))
+                  (nat_lt (size s)
+                          (size (insert s i)))))
+            (and
+               (not (lookup empty i))
+               (lookup (insert s i) i)))
+         (and
+            (not (lookup (delete s i) i))
+            (implies
+               (and
+                  (not (nat_eq i j))
+                  (lookup s j))
+               (and
+                 (lookup (insert s i) j)
+                 (lookup (delete s i) j)))))

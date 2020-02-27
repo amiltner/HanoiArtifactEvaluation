@@ -1,0 +1,33 @@
+(env
+    (debug (ocamlopt_flags (:standard -g -Oclassic)))
+    (_ (ocamlopt_flags (:standard -O3 -rounds 6))))
+
+(menhir (modules parser))
+
+(ocamllex lexer)
+
+(alias
+    (name NoLog)
+    (deps (universe))
+    (action
+        (bash "echo -ne '// AUTO-GENERATED. Any changes to this file may be OVERWRITTEN.\n\n#define LOGGING 0' > %{project_root}/../../src/config.h")))
+
+(alias
+    (name Logging)
+    (deps (universe))
+    (action
+        (bash "echo -ne '// AUTO-GENERATED. Any changes to this file may be OVERWRITTEN.\n\n#define LOGGING 1' > %{project_root}/../../src/config.h")))
+
+(rule
+    (targets config.h)
+    (deps (alias Logging))
+    (mode fallback)
+    (action
+        (bash "cp %{project_root}/../../src/config.h .")))
+
+(library
+    (name Hanoi)
+    (public_name Hanoi)
+    (libraries core Myth_folds Myth rpc_parallel)
+    (preprocessor_deps (file config.h))
+    (preprocess (pps ppx_bin_prot ppx_hash ppx_deriving.std ppx_let ppx_optcomp ppx_compare ppx_sexp_conv)))

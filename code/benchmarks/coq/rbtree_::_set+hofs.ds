@@ -1,0 +1,202 @@
+type color =
+  | Red
+  | Black
+
+type rbtree = mu rbtree .
+  | Leaf
+  | Node of (color * rbtree * nat * rbtree)
+
+type nat_option =
+  | Some of nat
+  | None
+
+struct
+  type t = rbtree
+
+  let empty = Leaf ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (b : t) ->
+        match b binding b with
+        | Leaf -> O
+        | Node -> add (S O) (add (size b.1) (size b.3))
+  ;;
+
+  let lookup =
+    fix (lookup : t -> nat -> bool) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding b with
+          | Leaf -> False
+          | Node -> (match nat_eq x b.2 binding c with
+                    | True -> True
+                    | False -> (match nat_lt x b.2 binding c with
+                                | True -> lookup b.1 x
+                                | False -> lookup b.3 x))
+  ;;
+
+  let insert =
+    fix (insert : t -> nat -> t) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding bp with
+          | Leaf -> Node (Black, Leaf, x, Leaf)
+          | Node -> (match nat_lt x bp.2 binding c with
+                     | True -> Node (Black, (insert bp.1 x), bp.2, bp.3)
+                     | False -> (match nat_eq x bp.2 binding c with
+                                 | True -> b
+                                 | False -> Node (Black, bp.1, bp.2, (insert bp.3 x))))
+  ;;
+
+  let min_val =
+    fix (min_val : t -> nat) =
+      fun (b : t) ->
+        match b binding b with
+        | Leaf -> O
+        | Node -> (match b.1 binding bl with
+                   | Leaf -> b.2
+                   | Node -> min_val b.1)
+  ;;
+
+  type possible_defs =
+    | JustLeft of nat
+    | JustRight of nat
+    | Both of nat * nat
+    | Neither
+  let min_max_vals =
+    fun (t1 : t) ->
+      fun (t2 : t) ->
+        ((fun (max_val_real : t -> nat_option) ->
+          (fun (min_val_real : t -> nat_option) ->
+            match max_val_real t1 binding n1 with
+              | None ->
+                (match min_val_real t2 binding n2 with
+                | None -> Neither
+                | Some -> JustRight n2)
+              | Some ->
+                (match min_val_real t2 binding n2 with
+                | None -> JustLeft n1
+                | Some -> Both (n1,n2)))
+          (fix (min_val_real : t -> nat_option) =
+            fun (b : t) ->
+              match b binding b with
+              | Leaf -> (None)
+              | Node -> (match b.1 binding bl with
+                         | Leaf -> (Some (b.2))
+                         | Node -> (min_val_real b.1))))
+        (fix (max_val_real : t -> nat_option) =
+          fun (b : t) ->
+            match b binding b with
+            | Leaf -> (None)
+            | Node -> (match b.3 binding bl with
+                       | Leaf -> (Some (b.2))
+                       | Node -> (max_val_real b.3))))
+  ;;
+
+  let delete =
+    fix (delete : t -> nat -> t) =
+      fun (b : t) ->
+        fun (x : nat) ->
+          match b binding bp with
+          | Leaf -> Leaf
+          | Node ->
+              (match nat_eq x bp.2 binding c with
+               | True -> (match bp.1 binding bl with
+                        | Leaf -> bp.3
+                        | Node ->
+                            (match bp.3 binding br with
+                             | Leaf -> bp.1
+                             | Node -> (fun (m : nat) ->
+                                          Node (Black, bp.1, m, (delete bp.3 m)))
+                                       (min_val bp.3)))
+               | False -> (match nat_lt x bp.2 binding c with
+                           | True -> Node (Black, (delete bp.1 x), bp.2, bp.3)
+                           | False -> Node (Black, bp.1, bp.2, (delete bp.3 x))))
+  ;;
+
+  let union =
+    fix (union : t -> t -> t) =
+      fun (bx : t) ->
+        fun (by : t) ->
+          match bx binding bx with
+          | Leaf -> by
+          | Node -> (union bx.1 (union bx.3 (insert by bx.2)))
+  ;;
+
+  let inter =
+    fix (inter : t -> t -> t) =
+      fun (bx : t) ->
+        fun (by : t) ->
+          match bx binding bx with
+          | Leaf -> Leaf
+          | Node -> (match lookup by bx.2 binding r with
+                     | True -> insert (union (inter bx.1 by) (inter bx.3 by)) bx.2
+                     | False -> union (inter bx.1 by) (inter bx.3 by))
+  ;;
+
+  let map =
+    fun (f : nat -> nat) ->
+      ((fix (map_acc : t -> t -> t) =
+        fun (acc : t) ->
+          fun (t : t) ->
+            match t binding t with
+            | Leaf -> acc
+            | Node ->
+              map_acc (map_acc (insert acc t.2) t.1) t.3)
+      Leaf)
+  ;;
+
+  let fold =
+    fun (f : nat -> t -> t) ->
+      fun (init : t) ->
+        ((fix (perform_fold : t -> t -> t) =
+          fun (acc : t) ->
+            fun (tr : t) ->
+              (match tr binding tr with
+              | Leaf -> acc
+              | Node -> perform_fold (perform_fold (f tr.2 acc) tr.1) tr.3))
+        init)
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+  val lookup : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete : t -> nat -> t
+
+  val map : (nat -> nat) -> t -> t
+  val fold : (nat -> t -> t) -> t -> t -> t
+end
+
+maintains
+
+forall (s : t) .
+  forall (i : nat) .
+    forall (j : nat) .
+      (and
+          (and
+            (and
+                (nat_eq (O) (size empty))
+                (implies
+                  (not (lookup s i))
+                  (nat_lt (size s)
+                          (size (insert s i)))))
+            (and
+                (not (lookup empty i))
+                (lookup (insert s i) i)))
+          (and
+            (not (lookup (delete s i) i))
+            (implies
+                (and
+                  (not (nat_eq i j))
+                  (lookup s j))
+                (and
+                  (lookup (insert s i) j)
+                  (lookup (delete s i) j)))))

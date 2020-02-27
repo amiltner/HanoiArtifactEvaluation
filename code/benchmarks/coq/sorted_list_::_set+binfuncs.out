@@ -1,0 +1,21 @@
+fix f1 (l1:list) : bool =
+  match l1 with
+    | Nil N_fresh_var_0 -> True
+    | Cons N_fresh_var_0 -> (fun (n1:unit) ->
+                               (fun (l2:unit) ->
+                                  match l2 with
+                                    | Nil N_fresh_var_1 -> True
+                                    | Cons N_fresh_var_1 -> (fun (n2:unit) ->
+                                                               (fun (l3:unit) ->
+                                                                  and
+                                                                    (
+                                                                    nat_lt n1
+                                                                    n2)
+                                                                    (
+                                                                    f1 l2))
+                                                                 (#2
+                                                                    N_fresh_var_1))
+                                                              (#1
+                                                                 N_fresh_var_1))
+                                 (#2 N_fresh_var_0))
+                              (#1 N_fresh_var_0)

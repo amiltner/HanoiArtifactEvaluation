@@ -1,0 +1,1 @@
+fun (l1:list) -> nat_eq (size (union l1 empty)) (size l1)

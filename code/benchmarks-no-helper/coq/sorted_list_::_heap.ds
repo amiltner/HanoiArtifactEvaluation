@@ -1,0 +1,120 @@
+type list = mu list .
+  | Nil
+  | Cons of (nat * list)
+
+type nat_option =
+  | None
+  | Some of nat
+
+struct
+  type t = list
+
+  let empty = Nil ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (l : t) ->
+        match l binding l with
+        | Nil -> O
+        | Cons -> S (size l.1)
+  ;;
+
+  let maximum =
+    fun (l : t) ->
+      match l binding l with
+      | Nil -> None
+      | Cons -> Some (l.0)
+  ;;
+
+  let contains =
+    fix (contains : t -> nat -> bool) =
+      fun (l : t) ->
+        fun (n : nat) ->
+          match l binding lv with
+          | Nil -> False
+          | Cons ->
+            (match nat_eq (lv.0) n binding c with
+             | True -> True
+             | False -> contains (lv.1) n)
+  ;;
+
+  let insert =
+    fun (l : t) ->
+      fun (x : nat) ->
+        match l binding lp with
+        | Nil -> Cons (x, Nil)
+        | Cons -> (match nat_lt x lp.0 binding c with
+                   | True -> Cons (lp.0, Cons (x,lp.1))
+                   | False -> Cons (x, l))
+  ;;
+
+  let delete_max =
+    fun (l : t) ->
+      match l binding lp with
+      | Nil -> l
+      | Cons ->
+        ((fun (res : t * nat_option) ->
+           match res.1 binding n with
+           | None -> res.0
+           | Some -> Cons (n,res.0))
+             ((fix (update : t -> t * nat_option) =
+               fun (l : t) ->
+                 (match l binding lp with
+                  | Nil -> (Nil,None)
+                  | Cons ->
+                    (fun (res : t * nat_option) ->
+                      (match res.1 binding n with
+                       | None -> (lp.1, (Some (lp.0)))
+                       | Some ->
+                         (match nat_lt n lp.0 binding c with
+                          | False -> (Cons (lp.0, res.0), res.1)
+                          | True -> (Cons (n, res.0), (Some (lp.0))))))
+                    (update lp.1)))
+                    lp.1))
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+
+  val maximum : t -> nat_option
+  val contains : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete_max : t -> t
+end
+
+maintains
+
+forall (h : t) .
+  forall (i : nat) .
+    (and
+       (and
+          (and
+             (nat_eq (O) (size empty))
+             (and
+                (nat_eq (size (insert h i))
+                        (S (size h)))
+                (implies
+                   (nat_lt (O) (size h))
+                   (nat_eq (size h)
+                           (S (size (delete_max h)))))))
+          (and
+             (contains (insert h i) i)
+             (match maximum h binding m with
+              | None -> True
+              | Some -> (match nat_lt m i binding g with
+                         | True -> not (contains
+                                          (delete_max
+                                             (insert h i))
+                                          i)
+                         | False -> True))))
+       (match maximum h binding m with
+        | None -> True
+        | Some -> (match nat_lt m i binding g with
+                   | True -> not (contains h i)
+                   | False -> True)))

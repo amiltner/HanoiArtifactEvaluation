@@ -1,0 +1,119 @@
+type list = mu list .
+  | Nil
+  | Cons of (nat * list)
+
+struct
+  type t = list
+
+  let empty = Nil ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (l : t) ->
+        match l binding l with
+        | Nil -> O
+        | Cons -> S (size l.1)
+  ;;
+
+  let lookup =
+    fix (lookup : t -> nat -> bool) =
+      fun (l : t) -> fun (x : nat) ->
+        match l binding l with
+        | Nil -> False
+        | Cons ->
+          (match nat_eq l.0 x binding c with
+           | True -> True
+           | False -> lookup l.1 x)
+  ;;
+
+  let insert =
+    fun (l : t) ->
+      fun (x : nat) ->
+        match lookup l x binding b with
+        | True -> l
+        | False -> Cons(x,l)
+  ;;
+
+  let delete =
+    fix (delete : t -> nat -> t) =
+      fun (l : t) -> fun (x : nat) ->
+          match l binding lp with
+          | Nil -> Nil
+          | Cons ->
+            (match nat_eq lp.0 x binding c with
+             | True -> lp.1
+             | False -> Cons(lp.0, delete lp.1 x))
+  ;;
+
+  let union =
+    fix (union : t -> t -> t) =
+      fun (la : t) ->
+        fun (lb : t) ->
+          match la binding la with
+          | Nil -> lb
+          | Cons -> (union la.1 (insert lb la.0))
+  ;;
+
+  let inter =
+    fix (inter : t -> t -> t) =
+      fun (la : t) ->
+        fun (lb : t) ->
+          match la binding la with
+          | Nil -> Nil
+          | Cons -> (match lookup lb la.0 binding r with
+                     | True -> Cons (la.0, (inter la.1 lb))
+                     | False -> inter la.1 lb)
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+  val lookup : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete : t -> nat -> t
+
+  val union : t -> t -> t
+  val inter : t -> t -> t
+end
+
+maintains
+
+forall (s1 : t) .
+  forall (s2 : t) .
+    forall (i : nat) .
+      forall (j : nat) .
+        (and
+           (and
+              (and
+                 (nat_eq (O) (size empty))
+                 (implies
+                    (not (lookup s1 i))
+                    (nat_lt (size s1)
+                            (size (insert s1 i)))))
+              (and
+                 (not (lookup empty i))
+                 (lookup (insert s1 i) i)))
+           (and
+              (and
+                 (not (lookup (delete s1 i) i))
+                 (implies
+                    (and
+                       (not (nat_eq i j))
+                       (lookup s1 j))
+                    (and
+                      (lookup (insert s1 i) j)
+                      (lookup (delete s1 i) j))))
+              (and
+                 (implies
+                    (or (lookup s1 i)
+                        (lookup s2 i))
+                    (lookup (union s1 s2) i))
+                 (implies
+                    (and (lookup s1 i)
+                         (lookup s2 i))
+                    (lookup (inter s1 s2) i)))))

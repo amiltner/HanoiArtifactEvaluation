@@ -1,0 +1,1 @@
+fun (l1:list) -> nat_eq (size (map (fun (n1:nat) -> n1) l1)) (size l1)

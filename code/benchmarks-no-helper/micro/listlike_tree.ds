@@ -1,0 +1,75 @@
+type tree = mu tree .
+  | Leaf
+  | Node of (tree * nat * tree)
+
+struct
+  type t = tree
+
+  let empty = Leaf ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (t : t) ->
+        match t binding t with
+        | Leaf -> O
+        | Node ->
+          add (S (size t.0)) (size t.2)
+  ;;
+
+  let contains_full =
+    fix (contains_full : t -> nat -> bool) =
+      fun (t : t) ->
+        fun (x : nat) ->
+          match t binding t with
+          | Leaf -> False
+          | Node ->
+            (or
+              (nat_eq t.1 x)
+              (or
+                (contains_full t.0 x)
+                (contains_full t.2 x)))
+  ;;
+
+  let contains_fast =
+    fix (contains_fast : t -> nat -> bool) =
+      fun (t : t) ->
+        fun (x : nat) ->
+          match t binding t with
+          | Leaf -> False
+          | Node ->
+            (or
+              (nat_eq t.1 x)
+              (contains_fast t.2 x))
+  ;;
+
+  let insert =
+    fix (insert : t -> nat -> t) =
+      fun (t : t) ->
+        fun (x : nat) ->
+          match t binding t with
+          | Leaf -> Node (Leaf,x,Leaf)
+          | Node -> Node (t.0,t.1,insert t.2 x)
+  ;;
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+
+  val insert : t -> nat -> t
+  val contains_full : t -> nat -> bool
+  val contains_fast : t -> nat -> bool
+end
+
+maintains
+
+forall (s : t) .
+  forall (i : nat) .
+    (and
+      (implies
+        (contains_full s i)
+        (contains_fast s i))
+      (contains_fast (insert s i) i))

@@ -1,0 +1,91 @@
+type natoption =
+  | None
+  | Some of nat
+
+struct
+  type natnatoption =
+  | NonePair
+  | SomePair of (nat * nat)
+
+  type t = natnatoption
+
+  let return =
+    fun (nn : (nat * nat)) ->
+      match nn.1 binding c with
+      | O -> NonePair
+      | S -> SomePair nn
+  ;;
+
+  let bind =
+    fun (r : t) ->
+      fun (f : (nat * nat) -> t) ->
+        match r binding r with
+        | NonePair -> NonePair
+        | SomePair -> (f r)
+  ;;
+
+  let mul =
+    fix (mul : nat -> nat -> nat) =
+      fun (n1 : nat) ->
+        fun (n2 : nat) ->
+          match n1 binding n with
+          | O -> O
+          | S -> add n2 (mul n n2)
+  ;;
+
+  let addrat =
+    fun (n1 : nat) ->
+      fun (n2 : nat) ->
+        SomePair ((add n1 n2),S O)
+  ;;
+
+  let div =
+    fun (n1 : nat) ->
+      fun (n2 : nat) ->
+        match n2 binding c with
+        | O -> NonePair
+        | S -> SomePair (n1,n2)
+  ;;
+        
+
+  let scale =
+    fun (n : nat) ->
+      fun (r : t) ->
+        match r binding r with
+        | NonePair -> NonePair
+        | SomePair ->
+          (match r.1 binding c with
+          | O -> NonePair
+          | S -> SomePair ((mul r.0 n),r.1))
+  ;;
+
+  let is_safe =
+    fun (r : t) ->
+      match r binding r with
+      | NonePair -> False
+      | SomePair -> True
+  ;;
+end
+:
+sig
+  type t
+
+  val return : (nat * nat) -> t
+  val bind : t -> ((nat * nat) -> t) -> t
+
+  val addrat : nat -> nat -> t
+  val div : nat -> nat -> t
+
+  val scale : nat -> t -> t
+
+  val is_safe : t -> bool
+end
+
+maintains
+
+forall (r : t) .
+  forall (i : nat) .
+    implies
+      (is_safe r)
+      (is_safe (scale i r))
+      

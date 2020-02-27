@@ -1,0 +1,130 @@
+(* Sources:
+ * --------
+ * Specification: https://softwarefoundations.cis.upenn.edu/vfa-current/Priqueue.html
+ * Implementation: https://softwarefoundations.cis.upenn.edu/vfa-current/Priqueue.html
+ *)
+
+type tree = mu tree .
+  | Leaf
+  | Node of (tree * nat * tree)
+
+type nat_option =
+  | None
+  | Some of nat
+
+struct
+  type t = tree
+
+  let empty = Leaf ;;
+
+  let size =
+    fix (size : t -> nat) =
+      fun (b : t) ->
+        match b binding b with
+        | Leaf -> O
+        | Node -> S (add (size b.0) (size b.2))
+  ;;
+
+  let maximum =
+    fun (b : t) ->
+      match b binding b with
+      | Leaf -> None
+      | Node -> Some (b.1)
+  ;;
+
+  let contains =
+    fix (contains : t -> nat -> bool) =
+      fun (x : t) ->
+        fun (n : nat) ->
+          match x binding vs with
+          | Leaf -> False
+          | Node -> (match nat_eq vs.1 n binding c with
+                     | True -> True
+                     | False -> or (contains vs.0 n) (contains vs.2 n))
+  ;;
+
+  let insert =
+    fix (insert : t -> nat -> t) =
+      fun (x : t) ->
+        fun (n : nat) ->
+          match x binding vs with
+          | Leaf -> Node(Leaf, n, Leaf)
+          | Node ->
+            (match (nat_lt (size vs.0) (size vs.2)) binding c with
+             | True ->
+               (match (nat_lt vs.1 n) binding c with
+                | True -> Node((insert vs.0 vs.1), n, vs.2)
+                | False -> Node((insert vs.0 n), vs.1, vs.2))
+             | False ->
+               (match (nat_lt vs.1 n) binding c with
+                | True -> Node(vs.0, n, (insert vs.2 vs.1))
+                | False -> Node(vs.0, vs.1, (insert vs.2 n))))
+  ;;
+
+  let delete_max =
+    fun (x : t) ->
+      match x binding vs with
+      | Leaf -> Leaf
+      | Node -> (
+          (fix (merge : t -> t -> t) =
+            fun (h1 : t) ->
+              fun (h2 : t) ->
+                match h1 binding vs1 with
+                | Leaf -> h2
+                | Node ->
+                  (match h2 binding vs2 with
+                  | Leaf -> h1
+                  | Node ->
+                    (match nat_lt vs1.1 vs2.1 binding c with
+                     | True -> Node (h1, vs2.1, merge vs2.0 vs2.2)
+                     | False -> Node (h2, vs1.1, merge vs1.0 vs1.2))))
+           vs.0 vs.2)
+  ;;
+
+  (* helper function *)
+end
+:
+sig
+  type t
+
+  val empty : t
+
+  val size : t -> nat
+
+  val maximum : t -> nat_option
+  val contains : t -> nat -> bool
+
+  val insert : t -> nat -> t
+  val delete_max : t -> t
+end
+
+maintains
+
+forall (h : t) .
+  forall (i : nat) .
+    (and
+       (and
+          (and
+             (nat_eq (O) (size empty))
+             (and
+                (nat_eq (size (insert h i))
+                        (S (size h)))
+                (implies
+                   (nat_lt (O) (size h))
+                   (nat_eq (size h)
+                           (S (size (delete_max h)))))))
+          (and
+             (contains (insert h i) i)
+             (match maximum h binding m with
+              | None -> True
+              | Some -> (match nat_lt m i binding g with
+                         | True -> not (contains
+                                          (delete_max
+                                             (insert h i))
+                                          i)
+                         | False -> True))))
+       (match maximum h binding m with
+        | None -> True
+        | Some -> (match nat_lt m i binding g with
+                   | True -> not (contains h i)
+                   | False -> True)))

@@ -1,0 +1,1 @@
+fun (b1:bst) -> nat_eq (length (inter b1 b1)) (length b1)

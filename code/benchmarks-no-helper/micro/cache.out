@@ -1,0 +1,10 @@
+fun (t1:natoption * natoption) ->
+  match #1 t1 with
+    | None N_fresh_var_0 -> True
+    | Some N_fresh_var_0 -> (fun (n1:unit) ->
+                               match #2 t1 with
+                                 | None N_fresh_var_1 -> True
+                                 | Some N_fresh_var_1 -> (fun (n2:unit) ->
+                                                            nat_lte n1 n2)
+                                                           N_fresh_var_1)
+                              N_fresh_var_0
