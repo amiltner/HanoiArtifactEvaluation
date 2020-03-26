@@ -5,6 +5,7 @@ from easyprocess import EasyProcess
 
 import os
 import csv
+import pretty_csv
 from os.path import splitext, join
 import subprocess
 import sys
@@ -84,7 +85,6 @@ def gather_datum(prog, path, base, additional_flags, timeout):
     end = time.time()
     return ((end - start), process_output.stdout,process_output.stderr)
 
-
 def gather_data(rootlength, prog, path, base):
     current_data = {"Test":join(path, base).replace("_","-")[rootlength:]}
 
@@ -101,7 +101,7 @@ def gather_data(rootlength, prog, path, base):
                 error = True
                 break
             if datum == "":
-                memout = True 
+                memout = True
                 break
             if time >= TIMEOUT_TIME - 5:
                 timeout = True
@@ -273,6 +273,32 @@ def print_data(data):
         datawriter.writeheader()
         datawriter.writerows(data)
 
+def print_fold_data(data):
+    print(data)
+    clean_full_data(data)
+    with open("generated_data/heap_no_helper_no_module.csv", "wb") as csvfile:
+        datawriter = csv.DictWriter(csvfile,fieldnames=data[0].keys())
+        datawriter.writeheader()
+        datawriter.writerows(data)
+
+def pretty_print_fig_7(data):
+    with open("to_remove.csv", "wb") as csvfile:
+        datawriter = csv.writer(csvfile)
+        datawriter.writerow(["Name","Size","Time (s)", "TVT (s)", "TVC", "MVT (s)", "TST (s)", "TSC", "MST (s)"])
+        for row in data:
+            datawriter.writerow([row["Test"],row["InvariantSize"],row["MythTime"], row["MythTotalVerifTime"], row["MythVerifCalls"], row["MeanVerifTime"], row["MythTotalSynthTime"], row["MythSynthCalls"], row["MeanSynthTime"]])
+    pretty_csv.pretty_file("to_remove.csv",new_filename="generated_data/fig_7.txt")
+    os.remove("to_remove.csv")
+
+def pretty_print_fig_8(data):
+    with open("to_remove.csv", "wb") as csvfile:
+        datawriter = csv.writer(csvfile)
+        datawriter.writerow(["Name","Hanoi","Hanoi-SRC", "Hanoi-CLC", "/\Str", "LA", "OneShot"])
+        for row in data:
+            datawriter.writerow([row["Test"],row["MythTime"], row["SRPTime"], row["CLPTime"], row["ConjStrTime"], row["LAStrTime"], row["ThirtyTime"]])
+    pretty_csv.pretty_file("to_remove.csv",new_filename="generated_data/fig_8.txt")
+    os.remove("to_remove.csv")
+
 def print_usage(args):
     print("Usage: {0} <prog> <test|testdir>".format(args[0]))
 
@@ -297,16 +323,90 @@ def load_data():
     except:
         return []
 
+def load_fold_data():
+    try:
+        with open("generated_data/heap_no_helper_no_module.csv", "r") as csvfile:
+            datareader = csv.DictReader(csvfile)
+            return [row for row in datareader]
+    except:
+        return []
+
+def run_bst(prog,bst_fname):
+    if os.path.exists("generated_data/bst_data.txt"):
+        print("bst found")
+        return
+    print("running bst")
+    path, fname = os.path.split(bst_fname)
+    base, ext = splitext(fname)
+    (time,datum,err) = gather_datum(prog, path, base, [], 5405)
+    res = ""
+    if err != "":
+        res = "error: " + err
+    elif time >= 5400:
+        res = "t/o"
+    elif datum == "":
+        res = "m/o"
+    else:
+        res = datum
+    with open("generated_data/bst_data.txt", "wb") as f:
+        f.write(res + "\n" + ";" + "\n" + str(time))
+
+def address_fold_data(prog, foldpath1,foldpath2,data):
+    def do_for_foldpath(foldpath,data):
+        path, fname = os.path.split(foldpath)
+        base, ext = splitext(fname)
+        test_name = base.replace("_","-")
+        print("FoldVsMyth: " + base)
+        if (any(row["Name"] == test_name for row in data)):
+            print("data already retrieved")
+            return
+        print("retrieving data for " + test_name)
+        timeout = False
+        error = False
+        incorrect = False
+        memout = False
+        (time,datum,err) = gather_datum(prog, path, base, ["-prelude-context"], TIMEOUT_TIME)
+        mythdata = ""
+        if err != "":
+            mythdata = "err"
+        elif time >= TIMEOUT_TIME - 5:
+            mythdata = "t/o"
+        elif datum == "":
+            mythdata = "m/o"
+        else:
+            mythdata = time
+        (time,datum,err) = gather_datum(prog, path, base, ["-prelude-context","-use-fold"], TIMEOUT_TIME)
+        folddata = ""
+        if err != "":
+            folddata = "err"
+        elif datum == "":
+            folddata = "m/o"
+        elif time >= TIMEOUT_TIME - 5:
+            folddata = "t/o"
+        else:
+            folddata = str(time)
+        newdata = { "Name" : test_name, "Myth" : mythdata, "Fold" : folddata }
+        print(newdata)
+        data.append(newdata)
+        print_fold_data(data)
+    do_for_foldpath(foldpath1,data)
+    do_for_foldpath(foldpath2,data)
+
 def main(args):
-    if len(args) == 3:
+    if len(args) == 6:
         prog = args[1]
         path = args[2]
+        foldpath1 = args[3]
+        foldpath2 = args[4]
+        bstpath = args[5]
         rootlength = len(path)
         data = load_data()
+        folddata = load_fold_data()
         print(data)
+        print(folddata)
         if not os.path.exists(prog):
             print_usage(args)
-        elif os.path.exists(path) and os.path.isdir(path):
+        elif os.path.exists(path) and os.path.isdir(path) and os.path.exists(foldpath1) and os.path.exists(foldpath2):
             for path, base in find_tests(path):
                 test_name = join(path, base).replace("_","-")[rootlength:]
                 print(test_name)
@@ -318,6 +418,10 @@ def main(args):
                     print("data already retrieved")
             sort_data(data)
             print_data(data)
+            pretty_print_fig_7(data)
+            pretty_print_fig_8(data)
+            address_fold_data(prog,foldpath1,foldpath2,folddata)
+            run_bst(prog,bstpath)
         else:
             path, filename = os.path.split(path)
             base, ext = splitext(filename)
