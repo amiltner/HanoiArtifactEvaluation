@@ -300,7 +300,7 @@ def pretty_print_fig_8(data):
     os.remove("to_remove.csv")
 
 def print_usage(args):
-    print("Usage: {0} <prog> <test|testdir>".format(args[0]))
+    print("Usage: {0} <prog> <testdir> <foldfile1> <foldfile2> <bstfile>".format(args[0]))
 
 def transform_data(path, base, run_data):
     current_data = {"Test":join(path, base + TEST_EXT).replace("_","-")[6:]}
@@ -393,7 +393,72 @@ def address_fold_data(prog, foldpath1,foldpath2,data):
     do_for_foldpath(foldpath2,data)
 
 def main(args):
-    if len(args) == 6:
+    if len(args) == 3:
+        prog = args[1]
+        path = args[2]
+        rootlength = len(path)
+        data = load_data()
+        print(data)
+        if not os.path.exists(prog):
+            print_usage(args)
+        elif os.path.exists(path) and os.path.isdir(path):
+            for path, base in find_tests(path):
+                test_name = join(path, base).replace("_","-")[rootlength:]
+                print(test_name)
+                if (not (any(row["Test"] == test_name for row in data))):
+                    current_data = gather_data(rootlength,prog, path, base)
+                    data.append(current_data)
+                    print_data(data)
+                else:
+                    print("data already retrieved")
+            sort_data(data)
+            print_data(data)
+            pretty_print_fig_7(data)
+            pretty_print_fig_8(data)
+        else:
+            path, filename = os.path.split(path)
+            base, ext = splitext(filename)
+            if ext != TEST_EXT:
+                print_usage(args)
+            else:
+                data = gather_data(prog, path, base)
+                sort_data(data)
+    elif len(args) == 5:
+        prog = args[1]
+        path = args[2]
+        foldpath1 = args[3]
+        foldpath2 = args[4]
+        rootlength = len(path)
+        data = load_data()
+        folddata = load_fold_data()
+        print(data)
+        print(folddata)
+        if not os.path.exists(prog):
+            print_usage(args)
+        elif os.path.exists(path) and os.path.isdir(path) and os.path.exists(foldpath1) and os.path.exists(foldpath2):
+            for path, base in find_tests(path):
+                test_name = join(path, base).replace("_","-")[rootlength:]
+                print(test_name)
+                if (not (any(row["Test"] == test_name for row in data))):
+                    current_data = gather_data(rootlength,prog, path, base)
+                    data.append(current_data)
+                    print_data(data)
+                else:
+                    print("data already retrieved")
+            sort_data(data)
+            print_data(data)
+            pretty_print_fig_7(data)
+            pretty_print_fig_8(data)
+            address_fold_data(prog,foldpath1,foldpath2,folddata)
+        else:
+            path, filename = os.path.split(path)
+            base, ext = splitext(filename)
+            if ext != TEST_EXT:
+                print_usage(args)
+            else:
+                data = gather_data(prog, path, base)
+                sort_data(data)
+    elif len(args) == 6:
         prog = args[1]
         path = args[2]
         foldpath1 = args[3]
